@@ -1,0 +1,17 @@
+{
+  "short_name": "BayadBuddy",
+  "name": "Bayad Buddy - AI Bill Splitter",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%234f46e5'/%3E%3Cpath d='M160 128v256l32-16 32 16 32-16 32 16 32-16 32 16V128l-32 16-32-16-32 16-32-16-32 16-32-16z' fill='white'/%3E%3Cpath d='M200 180h112m-112 40h112m-112 40h112' stroke='%234f46e5' stroke-width='20' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4f46e5",
+  "background_color": "#f8fafc"
+}

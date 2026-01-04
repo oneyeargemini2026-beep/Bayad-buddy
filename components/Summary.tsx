@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { SplitResult } from '../types';
 import * as htmlToImage from 'html-to-image';
@@ -10,9 +9,18 @@ interface Props {
   onSave: () => void;
   onClear: () => void;
   isModal?: boolean;
+  isHistoryView?: boolean;
 }
 
-const Summary: React.FC<Props> = ({ results, totalItems, onTogglePaid, onSave, onClear, isModal = false }) => {
+const Summary: React.FC<Props> = ({ 
+  results, 
+  totalItems, 
+  onTogglePaid, 
+  onSave, 
+  onClear, 
+  isModal = false,
+  isHistoryView = false
+}) => {
   const exportRef = useRef<HTMLDivElement>(null);
   const activeResults = results.filter(res => res.total > 0);
   const grandTotal = results.reduce((acc, r) => acc + r.total, 0);
@@ -93,7 +101,7 @@ const Summary: React.FC<Props> = ({ results, totalItems, onTogglePaid, onSave, o
           </div>
         )}
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {!isModal && (
+          {!isModal && !isHistoryView && (
             <button 
               onClick={onClear}
               className="text-xs font-bold text-slate-400 hover:text-rose-500 px-3 py-2 transition-colors"
@@ -106,15 +114,17 @@ const Summary: React.FC<Props> = ({ results, totalItems, onTogglePaid, onSave, o
             className="flex-1 sm:flex-none bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-share-nodes"></i>
-            Share
+            Share Breakdown
           </button>
-          <button 
-            onClick={onSave}
-            className="flex-1 sm:flex-none bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-check"></i>
-            Save
-          </button>
+          {!isHistoryView && (
+            <button 
+              onClick={onSave}
+              className="flex-1 sm:flex-none bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-check"></i>
+              Save Split
+            </button>
+          )}
         </div>
       </div>
 
@@ -189,7 +199,7 @@ const Summary: React.FC<Props> = ({ results, totalItems, onTogglePaid, onSave, o
         
         <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-2">
           <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.2em]">Generated via Bayad Buddy</p>
-          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-600">{new Date().toLocaleDateString()}</p>
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-600">Breakdown from History</p>
         </div>
       </div>
     </div>

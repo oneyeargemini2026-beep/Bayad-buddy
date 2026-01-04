@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HistoryEntry } from '../types';
 
@@ -8,9 +7,10 @@ interface Props {
   onClearHistory: () => void;
   onTogglePaid: (billId: string, personId: string) => void;
   onRemoveBill: (billId: string) => void;
+  onViewBill: (entry: HistoryEntry) => void;
 }
 
-const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onTogglePaid, onRemoveBill }) => {
+const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onTogglePaid, onRemoveBill, onViewBill }) => {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
       <div className="flex items-center justify-between mb-8">
@@ -54,23 +54,24 @@ const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onToggl
             return (
               <div 
                 key={entry.id} 
-                className={`p-4 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border transition-all relative ${
+                onClick={() => onViewBill(entry)}
+                className={`p-4 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border transition-all relative cursor-pointer active:scale-[0.98] ${
                   isFullyPaid 
                     ? 'border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-900/5' 
                     : 'border-slate-100 dark:border-slate-800'
                 } hover:border-indigo-200 dark:hover:border-indigo-700 group`}
               >
-                {/* Remove Button - Using an 'X' icon for "Remove" vibe */}
+                {/* Remove Button */}
                 <button 
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // Don't trigger "View Details"
                     onRemoveBill(entry.id);
                   }}
                   className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 active:scale-90"
                   title="Remove"
                 >
-                  <i className="fa-solid fa-xmark text-sm"></i>
+                  <i className="fa-solid fa-trash-can text-xs"></i>
                 </button>
 
                 <div className="flex justify-between items-start mb-4 pr-10">
@@ -98,7 +99,10 @@ const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onToggl
                     <button 
                       key={res.person.id} 
                       type="button"
-                      onClick={() => onTogglePaid(entry.id, res.person.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Don't trigger "View Details"
+                        onTogglePaid(entry.id, res.person.id);
+                      }}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-bold transition-all active:scale-95 ${
                         res.isPaid 
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/30 text-emerald-600' 
@@ -111,6 +115,12 @@ const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onToggl
                       {res.person.name}
                     </button>
                   ))}
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center">
+                  <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest group-hover:text-indigo-400 transition-colors flex items-center gap-1">
+                    <i className="fa-solid fa-magnifying-glass-plus"></i> Tap to view breakdown
+                  </span>
                 </div>
               </div>
             );

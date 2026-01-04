@@ -1,7 +1,4 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-
-const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export interface ParsedReceiptItem {
   name: string;
@@ -9,44 +6,52 @@ export interface ParsedReceiptItem {
 }
 
 export const parseReceiptImage = async (base64Data: string): Promise<ParsedReceiptItem[]> => {
-  const ai = getAiClient();
+  // Use the injected API_KEY
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Data.split(',')[1] || base64Data,
-          },
-        },
-        {
-          text: "Extract all items and their individual prices from this receipt. Ignore tax, total, or subtotal lines unless they are actual distinct menu items. Return an array of objects."
-        }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING, description: "Name of the item" },
-            price: { type: Type.NUMBER, description: "Price of the item" }
-          },
-          required: ["name", "price"]
-        }
-      }
-    }
-  });
+  // Extract base64 and mime type correctly
+  const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const cleanBase64 = base64Data.replace(/^data:image\/[a-z]+;base64,/, "");
 
   try {
-    const data = JSON.parse(response.text || "[]");
-    return data;
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: cleanBase64,
+            },
+          },
+          {
+            text: "You are a professional receipt parser. Extract every individual line item and its unit price from this image. DO NOT include tax, service charges, discounts, or grand totals. If an item name is unclear, use your best guess from context. Format the output as a JSON array of objects with 'name' and 'price' keys."
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING, description: "Detailed name of the item" },
+              price: { type: Type.NUMBER, description: "Numeric price of the item" }
+            },
+            required: ["name", "price"]
+          }
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) return [];
+    
+    return JSON.parse(text);
   } catch (error) {
-    console.error("Failed to parse Gemini response", error);
-    return [];
+    console.error("Gemini Scanning Error:", error);
+    throw error;
   }
 };

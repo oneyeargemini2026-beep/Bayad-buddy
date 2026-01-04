@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Person, BillItem, SplitResult, HistoryEntry } from './types';
 import { AVATAR_COLORS } from './constants';
@@ -13,9 +12,11 @@ const App: React.FC = () => {
     { id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }
   ]);
   const [items, setItems] = useState<BillItem[]>([]);
+  const [billTitle, setBillTitle] = useState('');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSplitModal, setShowSplitModal] = useState(false);
+  const [viewingHistoryEntry, setViewingHistoryEntry] = useState<HistoryEntry | null>(null);
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>({});
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('splitwise_theme') === 'dark';
@@ -56,12 +57,16 @@ const App: React.FC = () => {
   const togglePaidInHistory = (billId: string, personId: string) => {
     const updatedHistory = history.map(entry => {
       if (entry.id === billId) {
-        return {
+        const updatedEntry = {
           ...entry,
           results: entry.results.map(res => 
             res.person.id === personId ? { ...res, isPaid: !res.isPaid } : res
           )
         };
+        if (viewingHistoryEntry?.id === billId) {
+          setViewingHistoryEntry(updatedEntry);
+        }
+        return updatedEntry;
       }
       return entry;
     });
@@ -70,7 +75,6 @@ const App: React.FC = () => {
   };
 
   const removeBillFromHistory = (billId: string) => {
-    // Immediate state update for snappy UI
     const updatedHistory = history.filter(entry => entry.id !== billId);
     setHistory(updatedHistory);
     localStorage.setItem('splitwise_history', JSON.stringify(updatedHistory));
@@ -91,7 +95,7 @@ const App: React.FC = () => {
     const newEntry: HistoryEntry = {
       id: generateId(),
       date: new Date().toLocaleString(),
-      title: items.length > 0 ? items[0].name + (items.length > 1 ? '...' : '') : 'Quick Split',
+      title: billTitle.trim() || (items.length > 0 ? items[0].name + (items.length > 1 ? '...' : '') : 'Quick Split'),
       total,
       results: JSON.parse(JSON.stringify(results)) 
     };
@@ -102,9 +106,12 @@ const App: React.FC = () => {
   };
 
   const clearCurrent = () => {
-    setItems([]);
-    setPeople([{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }]);
-    setPaidStatus({});
+    if (window.confirm("Clear all items and people?")) {
+      setItems([]);
+      setBillTitle('');
+      setPeople([{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }]);
+      setPaidStatus({});
+    }
   };
 
   const addPerson = (name: string) => {
@@ -201,6 +208,7 @@ const App: React.FC = () => {
             onClose={() => setShowHistory(false)} 
             onTogglePaid={togglePaidInHistory}
             onRemoveBill={removeBillFromHistory}
+            onViewBill={(entry) => setViewingHistoryEntry(entry)}
             onClearHistory={() => {
               if (window.confirm("Remove all saved bills from history?")) {
                 setHistory([]);
@@ -222,10 +230,13 @@ const App: React.FC = () => {
               <BillManager 
                 items={items} 
                 people={people}
+                billTitle={billTitle}
+                setBillTitle={setBillTitle}
                 onAddItem={addItem} 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
                 onBulkAdd={addBulkItems}
+                onClearAll={() => setItems([])}
               />
             </section>
 
@@ -245,7 +256,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modal for viewing split details */}
+      {/* Modal for viewing active split details */}
       {showSplitModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -272,7 +283,38 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {!showHistory && !showSplitModal && (
+      {/* Modal for viewing saved bill details from history */}
+      {viewingHistoryEntry && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{viewingHistoryEntry.title}</h2>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{viewingHistoryEntry.date}</p>
+              </div>
+              <button 
+                onClick={() => setViewingHistoryEntry(null)}
+                className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-colors"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
+              <Summary 
+                results={viewingHistoryEntry.results} 
+                totalItems={viewingHistoryEntry.results.reduce((acc, r) => acc + r.items.length, 0)}
+                onTogglePaid={(personId) => togglePaidInHistory(viewingHistoryEntry.id, personId)}
+                onSave={() => {}} 
+                onClear={() => {}} 
+                isModal
+                isHistoryView
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!showHistory && !showSplitModal && !viewingHistoryEntry && (
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 md:hidden flex justify-between items-center shadow-lg z-50 transition-colors">
           <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Total: <span className="text-indigo-600 dark:text-indigo-400 font-bold">₱{splitResults.reduce((acc, r) => acc + r.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>

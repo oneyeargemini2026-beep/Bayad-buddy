@@ -35,7 +35,8 @@ const Summary: React.FC<Props> = ({
       const dataUrl = await htmlToImage.toPng(exportRef.current, {
         quality: 1,
         backgroundColor: document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc',
-        pixelRatio: 2
+        pixelRatio: 2,
+        skipFonts: true // Often solves export hangs
       });
       
       const link = document.createElement('a');
@@ -54,7 +55,8 @@ const Summary: React.FC<Props> = ({
     try {
       const dataUrl = await htmlToImage.toPng(exportRef.current, {
         backgroundColor: document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc',
-        pixelRatio: 2
+        pixelRatio: 2,
+        skipFonts: true
       });
 
       const response = await fetch(dataUrl);

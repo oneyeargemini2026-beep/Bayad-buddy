@@ -1,7 +1,5 @@
 {
   "name": "Bayad Buddy",
-  "description": "A sophisticated bill-splitting application featuring AI-powered receipt scanning, multi-person allocation, and detailed cost breakdowns.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "description": "A sophisticated bill-splitting application featuring multi-person allocation and detailed cost breakdowns.",
+  "requestFramePermissions": []
 }

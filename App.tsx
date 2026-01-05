@@ -8,19 +8,50 @@ import Header from './components/Header';
 import SavedBills from './components/SavedBills';
 
 const App: React.FC = () => {
-  const [people, setPeople] = useState<Person[]>([
-    { id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }
-  ]);
-  const [items, setItems] = useState<BillItem[]>([]);
-  const [billTitle, setBillTitle] = useState('');
+  // Initialize state from LocalStorage or defaults
+  const [people, setPeople] = useState<Person[]>(() => {
+    const saved = localStorage.getItem('splitwise_people');
+    return saved ? JSON.parse(saved) : [{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }];
+  });
+
+  const [items, setItems] = useState<BillItem[]>(() => {
+    const saved = localStorage.getItem('splitwise_items');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [billTitle, setBillTitle] = useState(() => {
+    return localStorage.getItem('splitwise_bill_title') || '';
+  });
+
+  const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('splitwise_paid_status');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [viewingHistoryEntry, setViewingHistoryEntry] = useState<HistoryEntry | null>(null);
-  const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>({});
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('splitwise_theme') === 'dark';
   });
+
+  // Sync state to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('splitwise_people', JSON.stringify(people));
+  }, [people]);
+
+  useEffect(() => {
+    localStorage.setItem('splitwise_items', JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem('splitwise_bill_title', billTitle);
+  }, [billTitle]);
+
+  useEffect(() => {
+    localStorage.setItem('splitwise_paid_status', JSON.stringify(paidStatus));
+  }, [paidStatus]);
 
   // Theme effect
   useEffect(() => {
@@ -111,6 +142,11 @@ const App: React.FC = () => {
       setBillTitle('');
       setPeople([{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }]);
       setPaidStatus({});
+      // Ensure LocalStorage is also cleaned up
+      localStorage.removeItem('splitwise_items');
+      localStorage.removeItem('splitwise_bill_title');
+      localStorage.removeItem('splitwise_people');
+      localStorage.removeItem('splitwise_paid_status');
     }
   };
 
@@ -140,7 +176,7 @@ const App: React.FC = () => {
       id: Math.random().toString(36).substring(2, 9),
       name,
       price,
-      assignedPersonIds: [people[0].id]
+      assignedPersonIds: people.length > 0 ? [people[0].id] : []
     };
     setItems([...items, newItem]);
   };
@@ -151,16 +187,6 @@ const App: React.FC = () => {
 
   const removeItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
-  };
-
-  const addBulkItems = (newItems: { name: string; price: number }[]) => {
-    const itemsToAdd = newItems.map(ni => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: ni.name,
-      price: ni.price,
-      assignedPersonIds: [people[0].id]
-    }));
-    setItems([...items, ...itemsToAdd]);
   };
 
   const splitResults = useMemo(() => {
@@ -199,6 +225,7 @@ const App: React.FC = () => {
         onToggleHistory={() => setShowHistory(!showHistory)} 
         onToggleTheme={toggleTheme}
         darkMode={darkMode}
+        isHistoryVisible={showHistory}
       />
       
       <main className="max-w-4xl mx-auto px-4 pt-6 space-y-8">
@@ -235,7 +262,7 @@ const App: React.FC = () => {
                 onAddItem={addItem} 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
-                onBulkAdd={addBulkItems}
+                onBulkAdd={() => {}} // Legacy
                 onClearAll={() => setItems([])}
               />
             </section>

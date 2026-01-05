@@ -6,13 +6,13 @@ export interface ParsedReceiptItem {
 }
 
 export const parseReceiptImage = async (base64Data: string): Promise<ParsedReceiptItem[]> => {
-  // Use the injected API_KEY
+  // Always create a fresh instance with the current process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   // Extract base64 and mime type correctly
   const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
   const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  const cleanBase64 = base64Data.replace(/^data:image\/[a-z]+;base64,/, "");
+  const cleanBase64 = base64Data.replace(/^data:image\/[a-zA-Z+]+;base64,/, "");
 
   try {
     const response = await ai.models.generateContent({
@@ -26,7 +26,7 @@ export const parseReceiptImage = async (base64Data: string): Promise<ParsedRecei
             },
           },
           {
-            text: "You are a professional receipt parser. Extract every individual line item and its unit price from this image. DO NOT include tax, service charges, discounts, or grand totals. If an item name is unclear, use your best guess from context. Format the output as a JSON array of objects with 'name' and 'price' keys."
+            text: "You are a professional receipt digitizer. Scan this image and extract every single purchased item as a separate object. Extract only the base price for each item. Ignore tax, tips, or service fees unless they are listed as separate specific items you want to keep. Return ONLY a raw JSON array of objects with 'name' (string) and 'price' (number) keys. Do not include markdown formatting or explanation text."
           }
         ]
       },
@@ -37,8 +37,8 @@ export const parseReceiptImage = async (base64Data: string): Promise<ParsedRecei
           items: {
             type: Type.OBJECT,
             properties: {
-              name: { type: Type.STRING, description: "Detailed name of the item" },
-              price: { type: Type.NUMBER, description: "Numeric price of the item" }
+              name: { type: Type.STRING, description: "Item description" },
+              price: { type: Type.NUMBER, description: "Item cost as a number" }
             },
             required: ["name", "price"]
           }
@@ -49,9 +49,15 @@ export const parseReceiptImage = async (base64Data: string): Promise<ParsedRecei
     const text = response.text;
     if (!text) return [];
     
-    return JSON.parse(text);
+    // Attempt to clean the text in case the model ignored 'no markdown' instructions
+    let jsonStr = text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```[a-z]*\n/, "").replace(/\n```$/, "");
+    }
+    
+    return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("Gemini Scanning Error:", error);
+    console.error("Gemini Scanning Error Details:", error);
     throw error;
   }
 };

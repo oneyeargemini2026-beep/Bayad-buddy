@@ -1,10 +1,12 @@
 import React, { useRef } from 'react';
-import { SplitResult } from '../types';
+import { SplitResult, UserProfile } from '../types';
 import * as htmlToImage from 'html-to-image';
 
 interface Props {
   results: SplitResult[];
   totalItems: number;
+  userProfile?: UserProfile;
+  billTitle?: string;
   onTogglePaid: (personId: string) => void;
   onSave: () => void;
   onClear: () => void;
@@ -15,6 +17,8 @@ interface Props {
 const Summary: React.FC<Props> = ({ 
   results, 
   totalItems, 
+  userProfile,
+  billTitle,
   onTogglePaid, 
   onSave, 
   onClear, 
@@ -36,7 +40,7 @@ const Summary: React.FC<Props> = ({
         quality: 1,
         backgroundColor: document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc',
         pixelRatio: 2,
-        skipFonts: true // Often solves export hangs
+        skipFonts: true
       });
       
       const link = document.createElement('a');
@@ -63,11 +67,18 @@ const Summary: React.FC<Props> = ({
       const blob = await response.blob();
       const file = new File([blob], 'bayad-buddy.png', { type: 'image/png' });
 
+      let shareText = `Bill Breakdown from Bayad Buddy: ₱${grandTotal.toLocaleString()}\n`;
+      if (userProfile?.paymentMethod === 'Bank') {
+        shareText += `Pay to: ${userProfile.name} via ${userProfile.bankName} (${userProfile.accountNumber})`;
+      } else if (userProfile?.paymentDetails) {
+        shareText += `Pay to: ${userProfile.name} via ${userProfile.paymentMethod} (${userProfile.paymentDetails})`;
+      }
+
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: 'Bayad Buddy Split Overview',
-          text: 'Here is the breakdown for our bill.'
+          text: shareText
         });
       } else {
         handleExportImage();
@@ -86,12 +97,15 @@ const Summary: React.FC<Props> = ({
     );
   }
 
-  // Determine Overall Bill Status Color
   const statusClasses = isFullyPaid 
     ? 'bg-emerald-600 shadow-emerald-200 dark:shadow-none' 
     : isPartiallyPaid 
       ? 'bg-amber-500 shadow-amber-200 dark:shadow-none' 
       : 'bg-slate-900 dark:bg-slate-800 shadow-slate-200 dark:shadow-none';
+
+  const hasPaymentDetails = userProfile?.paymentMethod === 'Bank' 
+    ? (userProfile.bankName && userProfile.accountNumber) 
+    : userProfile?.paymentDetails;
 
   return (
     <div className={`${isModal ? '' : 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm'} p-6 transition-colors`}>
@@ -135,15 +149,16 @@ const Summary: React.FC<Props> = ({
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
           
           <div className="flex justify-between items-center mb-6 relative z-10">
-            <div>
-              <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">Total Bill</span>
-              <p className="text-4xl font-black mt-1">₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <div className="flex-1 pr-4">
+              <span className="text-white/60 text-sm font-black uppercase tracking-[0.15em] block mb-1">
+                {billTitle ? billTitle : 'Total Bill'}
+              </span>
+              <p className="text-4xl font-black">₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             </div>
             <div className="text-right">
               <span className="bg-white/20 text-white px-3 py-1 rounded-full text-[10px] font-black border border-white/20 uppercase tracking-wider">
                 {isFullyPaid ? 'ALL PAID' : isPartiallyPaid ? `${totalPaid}/${activeResults.length} PAID` : 'UNPAID'}
               </span>
-              <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider mt-2">Bayad Buddy</p>
             </div>
           </div>
           <div className="flex justify-between items-end relative z-10">
@@ -156,10 +171,10 @@ const Summary: React.FC<Props> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {activeResults.map((res) => (
-            <button 
+            <div 
               key={res.person.id} 
               onClick={() => onTogglePaid(res.person.id)}
-              className={`text-left bg-white dark:bg-slate-900 rounded-3xl border overflow-hidden flex flex-col shadow-sm border-b-4 transition-all duration-300 active:scale-[0.98] ${res.isPaid ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'}`} 
+              className={`text-left bg-white dark:bg-slate-900 rounded-3xl border overflow-hidden flex flex-col shadow-sm border-b-4 transition-all duration-300 cursor-pointer active:scale-[0.98] ${res.isPaid ? 'opacity-70 grayscale-[0.3]' : 'opacity-100'}`} 
               style={{ borderColor: res.isPaid ? '#10b981' : (AVATAR_COLORS_HEX[res.person.avatarColor] || '#cbd5e1') }}
             >
               <div className="p-5">
@@ -195,13 +210,40 @@ const Summary: React.FC<Props> = ({
                   ))}
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
+
+        {/* Payment Info Section in Shared Breakdown */}
+        {hasPaymentDetails && (
+          <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-indigo-100 dark:border-indigo-900/30">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg ${
+                userProfile?.paymentMethod === 'GCash' ? 'bg-blue-600' : 
+                userProfile?.paymentMethod === 'Maya' ? 'bg-emerald-500' : 
+                userProfile?.paymentMethod === 'Bank' ? 'bg-slate-700' : 'bg-indigo-500'
+              }`}>
+                <i className={`fa-solid ${
+                  userProfile?.paymentMethod === 'GCash' ? 'fa-mobile-screen' : 
+                  userProfile?.paymentMethod === 'Maya' ? 'fa-wallet' : 
+                  userProfile?.paymentMethod === 'Bank' ? 'fa-building-columns' : 'fa-coins'
+                }`}></i>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Send Payment To</p>
+                <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 leading-tight">{userProfile?.name}</h4>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {userProfile?.paymentMethod === 'Bank' 
+                    ? `${userProfile.bankName}: ${userProfile.accountNumber}`
+                    : `${userProfile?.paymentMethod}: ${userProfile?.paymentDetails}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
-        <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-2">
+        <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-row items-baseline justify-between px-2 w-full">
           <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.2em]">Generated via Bayad Buddy</p>
-          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-600">Breakdown from History</p>
         </div>
       </div>
     </div>

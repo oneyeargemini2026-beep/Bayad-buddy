@@ -1,17 +1,35 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Person, BillItem, SplitResult, HistoryEntry } from './types';
+import { Person, BillItem, SplitResult, HistoryEntry, UserProfile } from './types';
 import { AVATAR_COLORS } from './constants';
 import PeopleManager from './components/PeopleManager';
 import BillManager from './components/BillManager';
 import Summary from './components/Summary';
 import Header from './components/Header';
 import SavedBills from './components/SavedBills';
+import Onboarding from './components/Onboarding';
+import MusicalChairs from './components/Roulette'; // We keep the filename but change the component behavior
+import ProfileModal from './components/ProfileModal';
 
 const App: React.FC = () => {
+  // User Profile State
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('bayad_buddy_profile');
+    return saved ? JSON.parse(saved) : { name: 'Me', paymentMethod: '', paymentDetails: '' };
+  });
+
+  const [showProfile, setShowProfile] = useState(false);
+
   // Initialize state from LocalStorage or defaults
   const [people, setPeople] = useState<Person[]>(() => {
     const saved = localStorage.getItem('splitwise_people');
-    return saved ? JSON.parse(saved) : [{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }];
+    if (saved) return JSON.parse(saved);
+    
+    // Default "Me" person should use the profile name
+    const initialName = localStorage.getItem('bayad_buddy_profile') 
+      ? JSON.parse(localStorage.getItem('bayad_buddy_profile')!).name 
+      : 'Me';
+      
+    return [{ id: '1', name: initialName, avatarColor: AVATAR_COLORS[0] }];
   });
 
   const [items, setItems] = useState<BillItem[]>(() => {
@@ -31,12 +49,23 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSplitModal, setShowSplitModal] = useState(false);
+  const [showChairs, setShowChairs] = useState(false);
   const [viewingHistoryEntry, setViewingHistoryEntry] = useState<HistoryEntry | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return localStorage.getItem('bayad_buddy_onboarded') !== 'true';
+  });
+  
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('splitwise_theme') === 'dark';
   });
 
   // Sync state to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('bayad_buddy_profile', JSON.stringify(userProfile));
+    // Automatically update the first person's name if they were the "Me" user
+    setPeople(prev => prev.map((p, i) => i === 0 ? { ...p, name: userProfile.name } : p));
+  }, [userProfile]);
+
   useEffect(() => {
     localStorage.setItem('splitwise_people', JSON.stringify(people));
   }, [people]);
@@ -140,9 +169,8 @@ const App: React.FC = () => {
     if (window.confirm("Clear all items and people?")) {
       setItems([]);
       setBillTitle('');
-      setPeople([{ id: '1', name: 'Me', avatarColor: AVATAR_COLORS[0] }]);
+      setPeople([{ id: '1', name: userProfile.name, avatarColor: AVATAR_COLORS[0] }]);
       setPaidStatus({});
-      // Ensure LocalStorage is also cleaned up
       localStorage.removeItem('splitwise_items');
       localStorage.removeItem('splitwise_bill_title');
       localStorage.removeItem('splitwise_people');
@@ -189,6 +217,11 @@ const App: React.FC = () => {
     setItems(items.filter(item => item.id !== id));
   };
 
+  const finishOnboarding = () => {
+    localStorage.setItem('bayad_buddy_onboarded', 'true');
+    setShowOnboarding(false);
+  };
+
   const splitResults = useMemo(() => {
     const resultsMap: Record<string, SplitResult> = {};
     people.forEach(p => {
@@ -221,11 +254,23 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 pb-20">
+      {showOnboarding && <Onboarding onFinish={finishOnboarding} />}
+      {showChairs && <MusicalChairs people={people} onClose={() => setShowChairs(false)} />}
+      {showProfile && (
+        <ProfileModal 
+          profile={userProfile} 
+          onSave={(p) => { setUserProfile(p); setShowProfile(false); }} 
+          onClose={() => setShowProfile(false)} 
+        />
+      )}
+      
       <Header 
         onToggleHistory={() => setShowHistory(!showHistory)} 
         onToggleTheme={toggleTheme}
+        onOpenProfile={() => setShowProfile(true)}
         darkMode={darkMode}
         isHistoryVisible={showHistory}
+        profileName={userProfile.name}
       />
       
       <main className="max-w-4xl mx-auto px-4 pt-6 space-y-8">
@@ -245,12 +290,19 @@ const App: React.FC = () => {
           />
         ) : (
           <>
-            <section>
+            <section className="relative">
               <PeopleManager 
                 people={people} 
                 onAdd={addPerson} 
                 onRemove={removePerson} 
               />
+              <button 
+                onClick={() => setShowChairs(true)}
+                className="absolute top-4 right-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+              >
+                <i className="fa-solid fa-chair"></i>
+                Musical Chairs
+              </button>
             </section>
 
             <section>
@@ -262,7 +314,7 @@ const App: React.FC = () => {
                 onAddItem={addItem} 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
-                onBulkAdd={() => {}} // Legacy
+                onBulkAdd={() => {}} 
                 onClearAll={() => setItems([])}
               />
             </section>
@@ -271,6 +323,8 @@ const App: React.FC = () => {
               <Summary 
                 results={splitResults} 
                 totalItems={items.length}
+                userProfile={userProfile}
+                billTitle={billTitle}
                 onTogglePaid={togglePersonPaid}
                 onSave={() => {
                   saveToHistory(splitResults);
@@ -300,8 +354,14 @@ const App: React.FC = () => {
               <Summary 
                 results={splitResults} 
                 totalItems={items.length}
+                userProfile={userProfile}
+                billTitle={billTitle}
                 onTogglePaid={togglePersonPaid}
-                onSave={() => saveToHistory(splitResults)}
+                onSave={() => {
+                  saveToHistory(splitResults);
+                  alert("Bill saved to history!");
+                  setShowSplitModal(false);
+                }}
                 onClear={clearCurrent}
                 isModal
               />
@@ -330,6 +390,8 @@ const App: React.FC = () => {
               <Summary 
                 results={viewingHistoryEntry.results} 
                 totalItems={viewingHistoryEntry.results.reduce((acc, r) => acc + r.items.length, 0)}
+                userProfile={userProfile}
+                billTitle={viewingHistoryEntry.title}
                 onTogglePaid={(personId) => togglePaidInHistory(viewingHistoryEntry.id, personId)}
                 onSave={() => {}} 
                 onClear={() => {}} 

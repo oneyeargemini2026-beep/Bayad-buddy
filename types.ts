@@ -5,6 +5,14 @@ export interface Person {
   avatarColor: string;
 }
 
+export interface UserProfile {
+  name: string;
+  paymentMethod: 'GCash' | 'Maya' | 'Bank' | 'Other' | '';
+  paymentDetails: string;
+  bankName?: string;
+  accountNumber?: string;
+}
+
 export interface BillItem {
   id: string;
   name: string;
@@ -26,4 +34,15 @@ export interface HistoryEntry {
   title: string;
   total: number;
   results: SplitResult[];
+}
+
+// Added RoomParticipant and RoomSession interfaces to support collaboration features
+export interface RoomParticipant {
+  id: string;
+  name: string;
+}
+
+export interface RoomSession {
+  roomId: string | null;
+  participants: RoomParticipant[];
 }

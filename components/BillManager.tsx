@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BillItem, Person } from '../types';
 
@@ -50,7 +51,7 @@ const BillManager: React.FC<Props> = ({
   const totalBill = items.reduce((acc, item) => acc + item.price, 0);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors relative overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

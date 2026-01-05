@@ -18,7 +18,7 @@ const SavedBills: React.FC<Props> = ({ history, onClose, onClearHistory, onToggl
           <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
             <i className="fa-solid fa-bookmark text-indigo-600 dark:text-indigo-400"></i>
           </div>
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Saved History</h2>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Saved Bills</h2>
         </div>
         <div className="flex items-center gap-4">
           <button 

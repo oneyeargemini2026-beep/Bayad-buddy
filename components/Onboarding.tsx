@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 interface Props {
@@ -22,6 +21,13 @@ const Onboarding: React.FC<Props> = ({ onFinish }) => {
       icon: "fa-users-plus",
       color: "text-emerald-500",
       bg: "bg-emerald-50 dark:bg-emerald-900/20"
+    },
+    {
+      title: "Musical Chairs",
+      description: "Can't decide who pays? Play a high-stakes round of Musical Chairs! The last one standing (or sitting) might be footing the bill.",
+      icon: "fa-chair",
+      color: "text-indigo-600",
+      bg: "bg-indigo-100 dark:bg-indigo-900/30"
     },
     {
       title: "Itemize & Assign",
@@ -64,7 +70,7 @@ const Onboarding: React.FC<Props> = ({ onFinish }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col items-center text-center">
+        <div className="flex-1 flex flex-col items-center text-center min-h-[280px]">
           <div className={`w-24 h-24 rounded-3xl ${currentStep.bg} flex items-center justify-center mb-8 transition-all duration-500`}>
             <i className={`fa-solid ${currentStep.icon} ${currentStep.color} text-4xl`}></i>
           </div>

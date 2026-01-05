@@ -328,7 +328,7 @@ const App: React.FC = () => {
                 onTogglePaid={togglePersonPaid}
                 onSave={() => {
                   saveToHistory(splitResults);
-                  alert("Bill saved to history!");
+                  alert("Bill saved!");
                 }}
                 onClear={clearCurrent}
               />
@@ -359,7 +359,7 @@ const App: React.FC = () => {
                 onTogglePaid={togglePersonPaid}
                 onSave={() => {
                   saveToHistory(splitResults);
-                  alert("Bill saved to history!");
+                  alert("Bill saved!");
                   setShowSplitModal(false);
                 }}
                 onClear={clearCurrent}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BillItem, Person } from '../types';
 
@@ -7,6 +6,10 @@ interface Props {
   people: Person[];
   billTitle: string;
   setBillTitle: (title: string) => void;
+  discountType: 'flat' | 'percent';
+  setDiscountType: (type: 'flat' | 'percent') => void;
+  discountValue: number;
+  setDiscountValue: (value: number) => void;
   onAddItem: (name: string, price: number) => void;
   onUpdateItem: (item: BillItem) => void;
   onRemoveItem: (id: string) => void;
@@ -19,6 +22,10 @@ const BillManager: React.FC<Props> = ({
   people, 
   billTitle,
   setBillTitle,
+  discountType,
+  setDiscountType,
+  discountValue,
+  setDiscountValue,
   onAddItem, 
   onUpdateItem, 
   onRemoveItem, 
@@ -48,7 +55,11 @@ const BillManager: React.FC<Props> = ({
     onUpdateItem({ ...item, assignedPersonIds: newIds });
   };
 
-  const totalBill = items.reduce((acc, item) => acc + item.price, 0);
+  const subtotalBill = items.reduce((acc, item) => acc + item.price, 0);
+  const actualDiscount = discountType === 'percent' 
+    ? subtotalBill * (discountValue / 100) 
+    : Math.min(discountValue, subtotalBill);
+  const totalBill = Math.max(0, subtotalBill - actualDiscount);
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors relative overflow-hidden">
@@ -113,6 +124,35 @@ const BillManager: React.FC<Props> = ({
             </button>
           </div>
         </form>
+
+        {/* Discount Section */}
+        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-all">
+          <div className="flex items-center justify-between mb-3">
+             <label className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Add Discount</label>
+             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <button 
+                  onClick={() => setDiscountType('flat')}
+                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${discountType === 'flat' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                >₱</button>
+                <button 
+                  onClick={() => setDiscountType('percent')}
+                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${discountType === 'percent' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                >%</button>
+             </div>
+          </div>
+          <div className="relative group">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
+              {discountType === 'flat' ? '₱' : '%'}
+            </span>
+            <input 
+              type="number"
+              value={discountValue || ''}
+              onChange={(e) => setDiscountValue(Number(e.target.value))}
+              placeholder="0"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-slate-50 placeholder-slate-400"
+            />
+          </div>
+        </div>
 
         {/* Items List */}
         <div className="mt-8">
@@ -182,8 +222,13 @@ const BillManager: React.FC<Props> = ({
         {items.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-2">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Subtotal</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</p>
               <p className="text-indigo-600 dark:text-indigo-400 text-3xl font-black">₱{totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              {actualDiscount > 0 && (
+                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 italic">
+                  Saved ₱{actualDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
+              )}
             </div>
             <i className="fa-solid fa-coins text-3xl text-slate-100 dark:text-slate-800"></i>
           </div>

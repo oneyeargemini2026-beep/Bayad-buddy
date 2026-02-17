@@ -24,6 +24,7 @@ export interface SplitResult {
   person: Person;
   items: { itemName: string; share: number }[];
   subtotal: number;
+  discountAmount: number;
   total: number;
   isPaid: boolean;
 }

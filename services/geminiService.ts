@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 export interface ParsedReceiptItem {
@@ -7,7 +8,8 @@ export interface ParsedReceiptItem {
 
 export const parseReceiptImage = async (base64Data: string): Promise<ParsedReceiptItem[]> => {
   // Always create a fresh instance with the current process.env.API_KEY
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Fix: Removed unnecessary logical OR to adhere to strict initialization rules
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   // Extract base64 and mime type correctly
   const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);

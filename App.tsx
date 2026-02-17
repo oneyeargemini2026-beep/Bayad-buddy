@@ -7,7 +7,7 @@ import Summary from './components/Summary';
 import Header from './components/Header';
 import SavedBills from './components/SavedBills';
 import Onboarding from './components/Onboarding';
-import MusicalChairs from './components/Roulette'; // We keep the filename but change the component behavior
+import MusicalChairs from './components/Roulette';
 import ProfileModal from './components/ProfileModal';
 
 const App: React.FC = () => {
@@ -23,12 +23,9 @@ const App: React.FC = () => {
   const [people, setPeople] = useState<Person[]>(() => {
     const saved = localStorage.getItem('splitwise_people');
     if (saved) return JSON.parse(saved);
-    
-    // Default "Me" person should use the profile name
     const initialName = localStorage.getItem('bayad_buddy_profile') 
       ? JSON.parse(localStorage.getItem('bayad_buddy_profile')!).name 
       : 'Me';
-      
     return [{ id: '1', name: initialName, avatarColor: AVATAR_COLORS[0] }];
   });
 
@@ -39,6 +36,14 @@ const App: React.FC = () => {
 
   const [billTitle, setBillTitle] = useState(() => {
     return localStorage.getItem('splitwise_bill_title') || '';
+  });
+
+  const [discountType, setDiscountType] = useState<'flat' | 'percent'>(() => {
+    return (localStorage.getItem('splitwise_discount_type') as 'flat' | 'percent') || 'flat';
+  });
+
+  const [discountValue, setDiscountValue] = useState<number>(() => {
+    return Number(localStorage.getItem('splitwise_discount_value')) || 0;
   });
 
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>(() => {
@@ -62,7 +67,6 @@ const App: React.FC = () => {
   // Sync state to LocalStorage
   useEffect(() => {
     localStorage.setItem('bayad_buddy_profile', JSON.stringify(userProfile));
-    // Automatically update the first person's name if they were the "Me" user
     setPeople(prev => prev.map((p, i) => i === 0 ? { ...p, name: userProfile.name } : p));
   }, [userProfile]);
 
@@ -79,10 +83,17 @@ const App: React.FC = () => {
   }, [billTitle]);
 
   useEffect(() => {
+    localStorage.setItem('splitwise_discount_type', discountType);
+  }, [discountType]);
+
+  useEffect(() => {
+    localStorage.setItem('splitwise_discount_value', discountValue.toString());
+  }, [discountValue]);
+
+  useEffect(() => {
     localStorage.setItem('splitwise_paid_status', JSON.stringify(paidStatus));
   }, [paidStatus]);
 
-  // Theme effect
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -93,7 +104,6 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Persistence for history
   useEffect(() => {
     const saved = localStorage.getItem('splitwise_history');
     if (saved) {
@@ -142,16 +152,12 @@ const App: React.FC = () => {
 
   const saveToHistory = (results: SplitResult[]) => {
     if (items.length === 0) return;
-    
     const generateId = () => {
-      try {
-        return crypto.randomUUID();
-      } catch (e) {
-        return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      }
+      try { return crypto.randomUUID(); } 
+      catch (e) { return Math.random().toString(36).substring(2, 15) + Date.now().toString(36); }
     };
 
-    const total = items.reduce((acc, item) => acc + item.price, 0);
+    const total = results.reduce((acc, r) => acc + r.total, 0);
     const newEntry: HistoryEntry = {
       id: generateId(),
       date: new Date().toLocaleString(),
@@ -169,10 +175,12 @@ const App: React.FC = () => {
     if (window.confirm("Clear all items and people?")) {
       setItems([]);
       setBillTitle('');
+      setDiscountValue(0);
       setPeople([{ id: '1', name: userProfile.name, avatarColor: AVATAR_COLORS[0] }]);
       setPaidStatus({});
       localStorage.removeItem('splitwise_items');
       localStorage.removeItem('splitwise_bill_title');
+      localStorage.removeItem('splitwise_discount_value');
       localStorage.removeItem('splitwise_people');
       localStorage.removeItem('splitwise_paid_status');
     }
@@ -229,28 +237,46 @@ const App: React.FC = () => {
         person: p,
         items: [],
         subtotal: 0,
+        discountAmount: 0,
         total: 0,
         isPaid: !!paidStatus[p.id]
       };
     });
 
+    let globalSubtotal = 0;
     items.forEach(item => {
       const numPeople = item.assignedPersonIds.length;
       if (numPeople === 0) return;
-      
+      globalSubtotal += item.price;
       const share = item.price / numPeople;
-
       item.assignedPersonIds.forEach(pid => {
         if (resultsMap[pid]) {
           resultsMap[pid].items.push({ itemName: item.name, share });
           resultsMap[pid].subtotal += share;
-          resultsMap[pid].total += share;
         }
       });
     });
 
+    // Calculate total discount
+    const actualDiscount = discountType === 'percent' 
+      ? globalSubtotal * (discountValue / 100) 
+      : Math.min(discountValue, globalSubtotal);
+
+    // Apply discount proportionally
+    if (globalSubtotal > 0 && actualDiscount > 0) {
+      Object.values(resultsMap).forEach(res => {
+        const propShare = res.subtotal / globalSubtotal;
+        res.discountAmount = actualDiscount * propShare;
+      });
+    }
+
+    // Final Total Calculation
+    Object.values(resultsMap).forEach(res => {
+      res.total = Math.max(0, res.subtotal - res.discountAmount);
+    });
+
     return Object.values(resultsMap);
-  }, [people, items, paidStatus]);
+  }, [people, items, paidStatus, discountType, discountValue]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 pb-20">
@@ -311,6 +337,10 @@ const App: React.FC = () => {
                 people={people}
                 billTitle={billTitle}
                 setBillTitle={setBillTitle}
+                discountType={discountType}
+                setDiscountType={setDiscountType}
+                discountValue={discountValue}
+                setDiscountValue={setDiscountValue}
                 onAddItem={addItem} 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
@@ -337,16 +367,12 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modal for viewing active split details */}
       {showSplitModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
               <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Split Details</h2>
-              <button 
-                onClick={() => setShowSplitModal(false)}
-                className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-colors"
-              >
+              <button onClick={() => setShowSplitModal(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-colors">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
@@ -370,7 +396,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Modal for viewing saved bill details from history */}
       {viewingHistoryEntry && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -379,10 +404,7 @@ const App: React.FC = () => {
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{viewingHistoryEntry.title}</h2>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{viewingHistoryEntry.date}</p>
               </div>
-              <button 
-                onClick={() => setViewingHistoryEntry(null)}
-                className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-colors"
-              >
+              <button onClick={() => setViewingHistoryEntry(null)} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-colors">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
@@ -410,7 +432,7 @@ const App: React.FC = () => {
           </div>
           <button 
             onClick={() => setShowSplitModal(true)}
-            className="bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-indigo-100 dark:shadow-none active:scale-95 transition-transform flex items-center gap-2"
+            className="bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg active:scale-95 transition-transform flex items-center gap-2"
           >
             <i className="fa-solid fa-expand text-xs"></i>
             View Split

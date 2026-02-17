@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { SplitResult, UserProfile } from '../types';
 import * as htmlToImage from 'html-to-image';
@@ -26,36 +27,35 @@ const Summary: React.FC<Props> = ({
   isHistoryView = false
 }) => {
   const exportRef = useRef<HTMLDivElement>(null);
-  const activeResults = results.filter(res => res.total > 0);
+  const activeResults = results.filter(res => res.total > 0 || res.subtotal > 0);
   const grandTotal = results.reduce((acc, r) => acc + r.total, 0);
+  const subtotalTotal = results.reduce((acc, r) => acc + r.subtotal, 0);
+  const discountTotal = results.reduce((acc, r) => acc + r.discountAmount, 0);
+  
   const totalPaid = activeResults.filter(r => r.isPaid).length;
   const isFullyPaid = activeResults.length > 0 && totalPaid === activeResults.length;
   const isPartiallyPaid = totalPaid > 0 && totalPaid < activeResults.length;
 
   const prepareExport = async () => {
     if (!exportRef.current) return;
-    
-    // Ensure all images are loaded before capturing (if any remain)
     const images = exportRef.current.getElementsByTagName('img');
-    const imagePromises = Array.from(images).map(img => {
-      if (img.complete) return Promise.resolve();
+    // Fix: Cast the unknown type to HTMLImageElement to access complete, onload, and onerror properties
+    const imagePromises = Array.from(images).map((img: any) => {
+      const imageElement = img as HTMLImageElement;
+      if (imageElement.complete) return Promise.resolve();
       return new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
+        imageElement.onload = resolve;
+        imageElement.onerror = resolve;
       });
     });
-    
     await Promise.all(imagePromises);
-    // Extra tick for browser to paint
     await new Promise(resolve => setTimeout(resolve, 200));
   };
 
   const handleExportImage = async () => {
     if (!exportRef.current) return;
-    
     try {
       await prepareExport();
-
       const dataUrl = await htmlToImage.toPng(exportRef.current, {
         quality: 1,
         backgroundColor: document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc',
@@ -63,7 +63,6 @@ const Summary: React.FC<Props> = ({
         skipFonts: false,
         cacheBust: true,
       });
-      
       const link = document.createElement('a');
       link.download = `bayad-buddy-${new Date().getTime()}.png`;
       link.href = dataUrl;
@@ -76,17 +75,14 @@ const Summary: React.FC<Props> = ({
 
   const handleShare = async () => {
     if (!exportRef.current) return;
-    
     try {
       await prepareExport();
-
       const dataUrl = await htmlToImage.toPng(exportRef.current, {
         backgroundColor: document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc',
         pixelRatio: 3,
         skipFonts: false,
         cacheBust: true
       });
-
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       const file = new File([blob], 'bayad-buddy.png', { type: 'image/png' });
@@ -178,6 +174,12 @@ const Summary: React.FC<Props> = ({
                 {billTitle ? billTitle : 'Total Bill'}
               </span>
               <p className="text-4xl font-black">₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              {discountTotal > 0 && (
+                <div className="mt-2 flex items-center gap-2 opacity-80">
+                   <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded">₱{subtotalTotal.toLocaleString()} Subtotal</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/40 px-2 py-0.5 rounded">-₱{discountTotal.toLocaleString()} Saved</span>
+                </div>
+              )}
             </div>
             <div className="text-right flex flex-col items-end justify-center">
               <span className="bg-white/20 text-white px-3 py-1.5 rounded-full text-[10px] font-black border border-white/20 uppercase tracking-widest shadow-sm">
@@ -232,13 +234,18 @@ const Summary: React.FC<Props> = ({
                       </span>
                     </div>
                   ))}
+                  {res.discountAmount > 0 && (
+                    <div className="flex justify-between text-[11px] text-emerald-500 font-black pt-1 border-t border-emerald-50 dark:border-emerald-900/20 mt-1 italic">
+                      <span>Discount Share</span>
+                      <span>-₱{res.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Payment Info Section in Shared Breakdown */}
         {hasPaymentDetails && (
           <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-indigo-100 dark:border-indigo-900/30">
             <div className="flex items-center gap-4">

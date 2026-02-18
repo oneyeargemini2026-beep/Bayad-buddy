@@ -262,11 +262,15 @@ const App: React.FC = () => {
       ? globalSubtotal * (discountValue / 100) 
       : Math.min(discountValue, globalSubtotal);
 
-    // Apply discount proportionally
-    if (globalSubtotal > 0 && actualDiscount > 0) {
-      Object.values(resultsMap).forEach(res => {
-        const propShare = res.subtotal / globalSubtotal;
-        res.discountAmount = actualDiscount * propShare;
+    // Filter people who actually have items assigned (active participants)
+    const activePeopleIds = Object.keys(resultsMap).filter(id => resultsMap[id].subtotal > 0);
+    const activeCount = activePeopleIds.length;
+
+    // Apply discount EVENLY among all people who have at least one item assigned
+    if (activeCount > 0 && actualDiscount > 0) {
+      const evenDiscountShare = actualDiscount / activeCount;
+      activePeopleIds.forEach(id => {
+        resultsMap[id].discountAmount = evenDiscountShare;
       });
     }
 

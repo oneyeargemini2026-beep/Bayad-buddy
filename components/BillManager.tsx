@@ -10,6 +10,8 @@ interface Props {
   setDiscountType: (type: 'flat' | 'percent') => void;
   discountValue: number;
   setDiscountValue: (value: number) => void;
+  discountTarget: string;
+  setDiscountTarget: (target: string) => void;
   onAddItem: (name: string, price: number) => void;
   onUpdateItem: (item: BillItem) => void;
   onRemoveItem: (id: string) => void;
@@ -26,6 +28,8 @@ const BillManager: React.FC<Props> = ({
   setDiscountType,
   discountValue,
   setDiscountValue,
+  discountTarget,
+  setDiscountTarget,
   onAddItem, 
   onUpdateItem, 
   onRemoveItem, 
@@ -74,7 +78,7 @@ const BillManager: React.FC<Props> = ({
       <div className="space-y-6">
         {/* Bill Metadata */}
         <div className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border-2 border-slate-100 dark:border-slate-800 transition-all focus-within:border-indigo-500/30">
-          <label className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-2 block">What are we splitting?</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-2 block pl-1">What are we splitting?</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
               <i className="fa-solid fa-file-invoice-dollar text-slate-400"></i>
@@ -126,31 +130,74 @@ const BillManager: React.FC<Props> = ({
         </form>
 
         {/* Discount Section */}
-        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-all">
-          <div className="flex items-center justify-between mb-3">
-             <label className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Add Discount</label>
-             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <button 
-                  onClick={() => setDiscountType('flat')}
-                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${discountType === 'flat' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                >₱</button>
-                <button 
-                  onClick={() => setDiscountType('percent')}
-                  className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${discountType === 'percent' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                >%</button>
-             </div>
+        <div className="bg-indigo-50/30 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100/50 dark:border-indigo-900/30 transition-all overflow-hidden">
+          <div className="p-5 pb-2">
+            <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-2 pl-1">
+                  <i className="fa-solid fa-tag text-indigo-500 text-xs"></i>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Discount</label>
+               </div>
+               <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <button 
+                    onClick={() => setDiscountType('flat')}
+                    className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${discountType === 'flat' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
+                  >₱</button>
+                  <button 
+                    onClick={() => setDiscountType('percent')}
+                    className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${discountType === 'percent' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
+                  >%</button>
+               </div>
+            </div>
+            
+            <div className="relative group">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
+                {discountType === 'flat' ? '₱' : '%'}
+              </span>
+              <input 
+                type="number"
+                value={discountValue || ''}
+                onChange={(e) => setDiscountValue(Number(e.target.value))}
+                placeholder="0"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl pl-8 pr-4 py-4 text-lg font-black focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-slate-50 placeholder-slate-400 transition-all"
+              />
+            </div>
           </div>
-          <div className="relative group">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
-              {discountType === 'flat' ? '₱' : '%'}
-            </span>
-            <input 
-              type="number"
-              value={discountValue || ''}
-              onChange={(e) => setDiscountValue(Number(e.target.value))}
-              placeholder="0"
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-slate-50 placeholder-slate-400"
-            />
+
+          <div className="px-5 pb-5 pt-2">
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-3 block">Apply to</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setDiscountTarget('everyone')}
+                className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black border transition-all active:scale-95 ${
+                  discountTarget === 'everyone' 
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white shadow-inner ${discountTarget === 'everyone' ? 'bg-white/30' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                   <i className={`fa-solid ${discountTarget === 'everyone' ? 'fa-check' : 'fa-users'} text-[7px]`}></i>
+                </div>
+                EVERYONE
+              </button>
+              
+              {people.map(person => (
+                <button
+                  key={person.id}
+                  onClick={() => setDiscountTarget(person.id)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[10px] font-black border transition-all active:scale-95 ${
+                    discountTarget === person.id 
+                      ? `${person.avatarColor} border-transparent text-white shadow-lg shadow-current/20 scale-[1.02]` 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white shadow-inner ${discountTarget === person.id ? 'bg-white/30' : person.avatarColor}`}>
+                    {person.name.charAt(0).toUpperCase()}
+                  </div>
+                  {person.name.toUpperCase()}
+                  {discountTarget === person.id && <i className="fa-solid fa-circle-check text-[10px] ml-auto"></i>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -161,7 +208,7 @@ const BillManager: React.FC<Props> = ({
             {items.length > 0 && (
               <button 
                 onClick={onClearAll}
-                className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 dark:hover:bg-rose-900/10 px-2 py-1 rounded"
+                className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 dark:hover:bg-rose-900/10 px-2 py-1 rounded transition-colors"
               >
                 Reset All
               </button>
@@ -184,7 +231,7 @@ const BillManager: React.FC<Props> = ({
                     </div>
                     <button 
                       onClick={() => onRemoveItem(item.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"
+                      className="w-8 h-8 flex items-center justify-center rounded-full text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 active:scale-90"
                     >
                       <i className="fa-solid fa-trash-can text-xs"></i>
                     </button>
@@ -206,7 +253,7 @@ const BillManager: React.FC<Props> = ({
                           `}
                         >
                           <div className={`w-3.5 h-3.5 rounded-full ${person.avatarColor} flex items-center justify-center text-[7px] text-white shadow-inner`}>
-                            {person.name.charAt(0)}
+                            {person.name.charAt(0).toUpperCase()}
                           </div>
                           {person.name}
                         </button>
@@ -226,7 +273,7 @@ const BillManager: React.FC<Props> = ({
               <p className="text-indigo-600 dark:text-indigo-400 text-3xl font-black">₱{totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               {actualDiscount > 0 && (
                 <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 italic">
-                  Saved ₱{actualDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  Saved ₱{actualDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({discountTarget === 'everyone' ? 'Everyone' : people.find(p => p.id === discountTarget)?.name})
                 </p>
               )}
             </div>

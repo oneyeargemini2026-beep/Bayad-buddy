@@ -46,6 +46,10 @@ const App: React.FC = () => {
     return Number(localStorage.getItem('splitwise_discount_value')) || 0;
   });
 
+  const [discountTarget, setDiscountTarget] = useState<string>(() => {
+    return localStorage.getItem('splitwise_discount_target') || 'everyone';
+  });
+
   const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('splitwise_paid_status');
     return saved ? JSON.parse(saved) : {};
@@ -89,6 +93,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('splitwise_discount_value', discountValue.toString());
   }, [discountValue]);
+
+  useEffect(() => {
+    localStorage.setItem('splitwise_discount_target', discountTarget);
+  }, [discountTarget]);
 
   useEffect(() => {
     localStorage.setItem('splitwise_paid_status', JSON.stringify(paidStatus));
@@ -176,11 +184,13 @@ const App: React.FC = () => {
       setItems([]);
       setBillTitle('');
       setDiscountValue(0);
+      setDiscountTarget('everyone');
       setPeople([{ id: '1', name: userProfile.name, avatarColor: AVATAR_COLORS[0] }]);
       setPaidStatus({});
       localStorage.removeItem('splitwise_items');
       localStorage.removeItem('splitwise_bill_title');
       localStorage.removeItem('splitwise_discount_value');
+      localStorage.removeItem('splitwise_discount_target');
       localStorage.removeItem('splitwise_people');
       localStorage.removeItem('splitwise_paid_status');
     }
@@ -197,6 +207,7 @@ const App: React.FC = () => {
 
   const removePerson = (id: string) => {
     if (people.length <= 1) return;
+    if (discountTarget === id) setDiscountTarget('everyone');
     setPeople(people.filter(p => p.id !== id));
     setItems(items.map(item => ({
       ...item,
@@ -262,16 +273,23 @@ const App: React.FC = () => {
       ? globalSubtotal * (discountValue / 100) 
       : Math.min(discountValue, globalSubtotal);
 
-    // Filter people who actually have items assigned (active participants)
-    const activePeopleIds = Object.keys(resultsMap).filter(id => resultsMap[id].subtotal > 0);
-    const activeCount = activePeopleIds.length;
+    if (discountTarget === 'everyone') {
+      // Filter people who actually have items assigned (active participants)
+      const activePeopleIds = Object.keys(resultsMap).filter(id => resultsMap[id].subtotal > 0);
+      const activeCount = activePeopleIds.length;
 
-    // Apply discount EVENLY among all people who have at least one item assigned
-    if (activeCount > 0 && actualDiscount > 0) {
-      const evenDiscountShare = actualDiscount / activeCount;
-      activePeopleIds.forEach(id => {
-        resultsMap[id].discountAmount = evenDiscountShare;
-      });
+      // Apply discount EVENLY among all people who have at least one item assigned
+      if (activeCount > 0 && actualDiscount > 0) {
+        const evenDiscountShare = actualDiscount / activeCount;
+        activePeopleIds.forEach(id => {
+          resultsMap[id].discountAmount = evenDiscountShare;
+        });
+      }
+    } else {
+      // Apply discount to specific person
+      if (resultsMap[discountTarget]) {
+        resultsMap[discountTarget].discountAmount = actualDiscount;
+      }
     }
 
     // Final Total Calculation
@@ -280,7 +298,7 @@ const App: React.FC = () => {
     });
 
     return Object.values(resultsMap);
-  }, [people, items, paidStatus, discountType, discountValue]);
+  }, [people, items, paidStatus, discountType, discountValue, discountTarget]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 pb-20">
@@ -345,6 +363,8 @@ const App: React.FC = () => {
                 setDiscountType={setDiscountType}
                 discountValue={discountValue}
                 setDiscountValue={setDiscountValue}
+                discountTarget={discountTarget}
+                setDiscountTarget={setDiscountTarget}
                 onAddItem={addItem} 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}

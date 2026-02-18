@@ -60,9 +60,10 @@ const BillManager: React.FC<Props> = ({
   };
 
   const subtotalBill = items.reduce((acc, item) => acc + item.price, 0);
-  const actualDiscount = discountType === 'percent' 
-    ? subtotalBill * (discountValue / 100) 
-    : Math.min(discountValue, subtotalBill);
+  
+  // Logic updated: Both modes treat discountValue as a flat amount.
+  // The footer "Total Bill" preview now reflects this flat deduction.
+  const actualDiscount = Math.min(discountValue, subtotalBill);
   const totalBill = Math.max(0, subtotalBill - actualDiscount);
 
   return (
@@ -135,32 +136,35 @@ const BillManager: React.FC<Props> = ({
             <div className="flex items-center justify-between mb-4">
                <div className="flex items-center gap-2 pl-1">
                   <i className="fa-solid fa-tag text-indigo-500 text-xs"></i>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Discount</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Discount Breakdown</label>
                </div>
                <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <button 
                     onClick={() => setDiscountType('flat')}
+                    title="Split Evenly"
                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${discountType === 'flat' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
                   >₱</button>
                   <button 
                     onClick={() => setDiscountType('percent')}
+                    title="Split Proportionally (By Amount)"
                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${discountType === 'percent' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
                   >%</button>
                </div>
             </div>
             
             <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
-                {discountType === 'flat' ? '₱' : '%'}
-              </span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₱</span>
               <input 
                 type="number"
                 value={discountValue || ''}
                 onChange={(e) => setDiscountValue(Number(e.target.value))}
-                placeholder="0"
+                placeholder="Total Discount Amount"
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl pl-8 pr-4 py-4 text-lg font-black focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-slate-50 placeholder-slate-400 transition-all"
               />
             </div>
+            <p className="text-[9px] font-bold text-slate-400 mt-2 pl-1">
+              {discountType === 'percent' ? 'Selected: Proportional distribution split.' : 'Selected: Equal distribution split.'}
+            </p>
           </div>
 
           <div className="px-5 pb-5 pt-2">

@@ -268,22 +268,30 @@ const App: React.FC = () => {
       });
     });
 
-    // Calculate total discount
-    const actualDiscount = discountType === 'percent' 
-      ? globalSubtotal * (discountValue / 100) 
-      : Math.min(discountValue, globalSubtotal);
+    // Discount logic updated per request:
+    // Both 'flat' and 'percent' modes now treat discountValue as a flat amount.
+    // 'percent' (%) button now triggers a PROPORTIONAL SPLIT: (Your amount / Total) * Discount
+    // 'flat' (₱) button triggers an EVEN SPLIT: Discount / Total Active People
+    const actualDiscount = Math.min(discountValue, globalSubtotal);
 
     if (discountTarget === 'everyone') {
-      // Filter people who actually have items assigned (active participants)
       const activePeopleIds = Object.keys(resultsMap).filter(id => resultsMap[id].subtotal > 0);
       const activeCount = activePeopleIds.length;
 
-      // Apply discount EVENLY among all people who have at least one item assigned
       if (activeCount > 0 && actualDiscount > 0) {
-        const evenDiscountShare = actualDiscount / activeCount;
-        activePeopleIds.forEach(id => {
-          resultsMap[id].discountAmount = evenDiscountShare;
-        });
+        if (discountType === 'percent') {
+          // PROPORTIONAL Distribution
+          activePeopleIds.forEach(id => {
+            const shareOfBill = resultsMap[id].subtotal / globalSubtotal;
+            resultsMap[id].discountAmount = shareOfBill * actualDiscount;
+          });
+        } else {
+          // EVEN Distribution
+          const evenDiscountShare = actualDiscount / activeCount;
+          activePeopleIds.forEach(id => {
+            resultsMap[id].discountAmount = evenDiscountShare;
+          });
+        }
       }
     } else {
       // Apply discount to specific person

@@ -1,11 +1,11 @@
 
-const CACHE_NAME = 'bayad-buddy-cache-v5';
+const CACHE_NAME = 'bayad-buddy-cache-v6';
 const OFFLINE_URL = '/offline.html';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.svg',
+  '/icon.png',
   OFFLINE_URL
 ];
 

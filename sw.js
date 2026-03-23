@@ -1,11 +1,11 @@
 
-const CACHE_NAME = 'bayad-buddy-cache-v6';
+const CACHE_NAME = 'bayad-buddy-cache-v7';
 const OFFLINE_URL = '/offline.html';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.png',
+  'https://cdn-icons-png.flaticon.com/512/2936/2936657.png',
   OFFLINE_URL
 ];
 

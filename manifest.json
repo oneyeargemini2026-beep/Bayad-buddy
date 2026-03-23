@@ -4,7 +4,7 @@
   "description": "Splitting bills made simple and beautiful.",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
+      "src": "/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

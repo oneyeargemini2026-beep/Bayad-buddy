@@ -1,10 +1,12 @@
 
 const CACHE_NAME = 'bayad-buddy-cache-v2';
+const OFFLINE_URL = './offline.html';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './logo.svg',
+  OFFLINE_URL,
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
@@ -73,7 +75,8 @@ self.addEventListener('fetch', (event) => {
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
-        return null;
+        // Fallback to offline page
+        return caches.match(OFFLINE_URL);
       });
     })
   );

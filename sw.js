@@ -1,11 +1,11 @@
 
-const CACHE_NAME = 'bayad-buddy-cache-v4';
-const OFFLINE_URL = './offline.html';
+const CACHE_NAME = 'bayad-buddy-cache-v5';
+const OFFLINE_URL = '/offline.html';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './logo.svg',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/logo.svg',
   OFFLINE_URL
 ];
 
@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() => {
         console.log('[Service Worker] Navigation failed, returning index.html');
-        return caches.match('./index.html');
+        return caches.match('/index.html');
       })
     );
     return;

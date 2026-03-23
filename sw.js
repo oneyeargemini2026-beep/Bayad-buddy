@@ -5,7 +5,7 @@ const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  'https://cdn-icons-png.flaticon.com/512/2936/2936657.png',
+  'https://i.imgur.com/sJK60iJ.png',
   OFFLINE_URL
 ];
 
